@@ -3,15 +3,22 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
-<meta name="description" content="КПИ Чек-лист отделов — мобильное приложение для управления мотивацией старших продавцов">
 <title>КПИ · Чек-лист отделов</title>
+
+<!-- PWA: манифест, иконка, статус-бар -->
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#14161b">
 <meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="КПИ Чек-лист">
-<link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'><rect fill='%2314161b' width='180' height='180'/></svg>">
+<link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'><rect fill='%2314161b' width='180' height='180' rx='40'/><rect fill='%231c1f26' x='30' y='50' width='120' height='80' rx='12'/><rect fill='%23d9a441' x='45' y='65' width='12' height='12' rx='2'/><rect fill='%23d9a441' x='65' y='70' width='50' height='4' rx='2'/></svg>">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect fill='%2314161b' width='32' height='32'/><path fill='%23d9a441' d='M8 10h14v2H8zm0 5h14v2H8zm0 5h14v2H8z'/></svg>">
+
+<!-- Шрифт грузится асинхронно, чтобы не блокировать первую отрисовку (без белой вспышки) -->
+<link rel="preload" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
+
 <style>
   :root{
     --bg:#14161b;
@@ -34,7 +41,7 @@
   }
   *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
   html,body{margin:0; padding:0; background:var(--bg); color:var(--text);
-    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',sans-serif; height:100%; overscroll-behavior-y:none;}
+    font-family:'Manrope',system-ui,-apple-system,sans-serif; height:100%; overscroll-behavior-y:none;}
   body{display:flex; flex-direction:column; opacity:0; animation:fadein .25s ease forwards;}
   @keyframes fadein{ to{opacity:1;} }
 
@@ -48,7 +55,7 @@
   .date-row{display:flex; align-items:center; gap:8px; margin-top:11px;}
   .date-row input[type=date]{
     flex:1; background:var(--bg-elev2); border:1px solid var(--line); color:var(--text);
-    font-weight:600; font-size:14px; padding:10px 11px; border-radius:11px;
+    font-family:'Manrope',sans-serif; font-weight:600; font-size:14px; padding:10px 11px; border-radius:11px;
     -webkit-appearance:none; appearance:none;
   }
   .today-btn{background:none; border:1px solid var(--line); color:var(--text-dim); font-size:12.5px;
@@ -61,13 +68,20 @@
   .day-progress .ring{width:30px; height:30px; border-radius:50%; position:relative; flex:0 0 auto;
     background:conic-gradient(var(--accent) calc(var(--pct,0)*1%), var(--bg-elev2) 0);}
   .day-progress .ring::after{content:""; position:absolute; inset:4px; border-radius:50%; background:var(--bg-elev);}
+  .day-progress .num{font-size:11.5px; font-weight:800; color:var(--text-dim); font-variant-numeric:tabular-nums;}
 
   main{flex:1; overflow-y:auto; padding:14px 14px calc(100px + var(--safe-bottom)); -webkit-overflow-scrolling:touch;}
 
+  .locked-banner{background:var(--bg-elev2); border:1px solid var(--line); color:var(--text-dim);
+    font-size:12px; font-weight:700; padding:10px 12px; border-radius:10px; margin-bottom:14px; text-align:center;}
+
   .slot-row{display:flex; gap:6px; margin-bottom:14px; overflow-x:auto; padding-bottom:2px;}
   .slot-chip{flex:0 0 auto; padding:9px 15px; border-radius:999px; border:1px solid var(--line);
-    background:var(--bg-elev); color:var(--text-dim); font-weight:700; font-size:13px;}
+    background:var(--bg-elev); color:var(--text-dim); font-weight:700; font-size:13px;
+    display:flex; align-items:center; gap:6px;}
   .slot-chip.active{background:var(--accent); border-color:var(--accent); color:var(--accent-ink);}
+  .slot-chip .sdot{width:6px; height:6px; border-radius:50%; background:var(--done); flex:0 0 auto;}
+  .slot-chip.active .sdot{background:var(--accent-ink);}
 
   .section{background:var(--bg-elev); border:1px solid var(--line); border-radius:var(--radius);
     margin-bottom:16px; overflow:hidden;}
@@ -79,41 +93,55 @@
   .weight-tag{font-size:11px; color:var(--accent); font-weight:800; background:rgba(217,164,65,.12);
     padding:4px 9px; border-radius:8px; white-space:nowrap;}
   .progress-pill{font-size:11px; font-weight:800; color:var(--text-dim); background:var(--bg-elev2);
-    padding:4px 9px; border-radius:8px; white-space:nowrap;}
+    padding:4px 9px; border-radius:8px; font-variant-numeric:tabular-nums; white-space:nowrap;}
   .progress-pill.full{color:var(--done); background:var(--done-bg);}
   .mark-all{margin-top:10px; width:100%; font-size:12.5px; font-weight:700; color:var(--accent);
-    background:rgba(217,164,65,.08); border:1px dashed #8a6a2c; border-radius:10px; padding:9px; }
+    background:rgba(217,164,65,.08); border:1px dashed var(--accent-dim, #8a6a2c); border-radius:10px; padding:9px; }
   .mark-all:active{background:rgba(217,164,65,.16);}
 
   .dept-row{display:flex; align-items:center; gap:12px; padding:13px 14px; border-bottom:1px solid var(--line); cursor:pointer;}
   .dept-row:active{background:var(--bg-elev2);}
   .dept-row:last-child{border-bottom:none;}
+  .dept-row.door{background:rgba(255,255,255,.015);}
+  .dept-row.locked{cursor:default;}
+  .door-divider{padding:9px 14px 3px; font-size:10.5px; font-weight:800; letter-spacing:.5px; text-transform:uppercase;
+    color:var(--text-dim2); border-top:1px dashed var(--line);}
+
   .dept-avatar{width:34px; height:34px; border-radius:10px; flex:0 0 auto; display:flex; align-items:center;
     justify-content:center; font-size:13px; font-weight:800; color:#14161b;}
   .dept-col{flex:1; display:flex; flex-direction:column; min-width:0;}
+  .dept-name-row{display:flex; align-items:center; gap:6px;}
   .dept-name{font-size:14.5px; font-weight:700;}
   .note-dot{width:6px; height:6px; border-radius:50%; background:var(--accent); flex:0 0 auto;}
-  .dept-sub{font-size:11px; color:var(--text-dim2); font-weight:500; margin-top:1px;}
+  .dept-sub{display:block; font-size:11px; color:var(--text-dim2); font-weight:500; margin-top:1px;}
+  .note-static{margin-top:6px; font-size:11.5px; color:var(--text-dim); line-height:1.4;}
 
   .note-toggle{align-self:flex-start; margin-top:6px; font-size:11.5px; color:var(--text-dim); background:var(--bg-elev2);
     border:none; padding:5px 10px; border-radius:8px; font-weight:600;}
   .note-input{width:100%; margin-top:8px; background:var(--bg); border:1px solid var(--line); color:var(--text);
-    font-size:13px; padding:9px 10px; border-radius:9px; display:none;}
+    font-family:'Manrope',sans-serif; font-size:13px; padding:9px 10px; border-radius:9px; display:none;}
   .note-input.show{display:block;}
 
   .toggle{width:50px; height:30px; border-radius:999px; background:var(--bg-elev2); border:1px solid var(--line);
     position:relative; flex:0 0 auto;}
   .toggle .knob{position:absolute; top:2px; left:2px; width:24px; height:24px; border-radius:999px;
-    background:var(--text-dim); transition:transform .16s ease, background .16s ease;}
+    background:var(--text-dim); transition:transform .16s ease, background .16s ease; display:flex; align-items:center; justify-content:center;
+    font-size:12px; color:var(--bg-elev);}
   .toggle.on{background:var(--done-bg); border-color:var(--done);}
-  .toggle.on .knob{transform:translateX(20px); background:var(--done);}
+  .toggle.on .knob{transform:translateX(20px); background:var(--done); color:#0e1a14;}
+  .toggle.locked{opacity:.45;}
 
   nav.tabs{position:fixed; left:0; right:0; bottom:0; display:flex; background:var(--bg-elev);
     border-top:1px solid var(--line); padding:8px 6px calc(8px + var(--safe-bottom)); z-index:30;}
-  .tab-btn{flex:1; background:none; border:none; color:var(--text-dim); font-family:inherit;
+  .tab-btn{flex:1; background:none; border:none; color:var(--text-dim); font-family:'Manrope',sans-serif;
     display:flex; flex-direction:column; align-items:center; gap:3px; padding:6px 2px; border-radius:12px; position:relative;}
   .tab-btn:active{background:var(--bg-elev2);}
-  .tab-btn .ic{font-size:20px; line-height:1;}
+  .tab-btn .ic-wrap{position:relative;}
+  .tab-btn .ic{font-size:20px; line-height:1; display:block;}
+  .tab-btn .status-dot{position:absolute; top:-2px; right:-4px; width:9px; height:9px; border-radius:50%;
+    background:var(--text-dim2); border:2px solid var(--bg-elev);}
+  .tab-btn .status-dot.partial{background:var(--accent);}
+  .tab-btn .status-dot.full{background:var(--done);}
   .tab-btn .lb{font-size:10.5px; font-weight:700; text-align:center; line-height:1.15;}
   .tab-btn.active{color:var(--accent);}
   .tab-btn.active .ic{filter:drop-shadow(0 0 8px rgba(217,164,65,.35));}
@@ -121,38 +149,16 @@
   .toast{position:fixed; left:50%; transform:translateX(-50%); bottom:calc(84px + var(--safe-bottom));
     background:#20242c; border:1px solid var(--line); color:var(--text); font-size:12.5px; font-weight:600;
     padding:9px 16px; border-radius:999px; z-index:40; opacity:0; pointer-events:none; transition:opacity .25s, transform .25s;
-    display:flex; align-items:center; gap:6px;}
+    display:flex; align-items:center; gap:6px; box-shadow:0 8px 24px rgba(0,0,0,.35);}
   .toast.show{opacity:1; transform:translateX(-50%) translateY(-4px);}
   .toast .dot{width:7px; height:7px; border-radius:50%; background:var(--done);}
   .toast.bad .dot{background:var(--bad);}
 
   .hint{color:var(--text-dim2); font-size:11.5px; padding:2px 4px 12px; line-height:1.5; text-align:center;}
-
-  .modal-overlay{position:fixed; inset:0; background:rgba(0,0,0,.6); display:none; align-items:center; justify-content:center; z-index:99;}
-  .modal-overlay.show{display:flex;}
-  .modal-box{background:var(--bg-elev); border:1px solid var(--line); border-radius:var(--radius); 
-    padding:20px; max-width:360px; width:90%; max-height:80vh; overflow-y:auto;}
-  .modal-box h3{margin:0 0 12px; font-size:16px; font-weight:800;}
-  .modal-box input, .modal-box button{width:100%; font-family:inherit;}
-  .modal-box input{background:var(--bg); border:1px solid var(--line); color:var(--text); 
-    padding:10px 12px; border-radius:9px; margin-bottom:10px; font-size:14px;}
-  .modal-box button{padding:12px; border:none; border-radius:9px; font-weight:700; font-size:14px;}
-  .modal-btn-ok{background:var(--accent); color:var(--accent-ink);}
-  .modal-btn-ok:active{opacity:.8;}
-
   ::-webkit-scrollbar{display:none;}
 </style>
 </head>
 <body>
-
-<div class="modal-overlay" id="configModal">
-  <div class="modal-box">
-    <h3>Настройка приложения</h3>
-    <p style="color:var(--text-dim); font-size:13px; margin:0 0 16px;">Вставьте URL вашего Google Apps Script Web App (заканчивается на /exec)</p>
-    <input type="url" id="apiUrlInput" placeholder="https://script.google.com/macros/s/..." style="margin-bottom:12px;">
-    <button class="modal-btn-ok" onclick="saveApiUrl()">Сохранить</button>
-  </div>
-</div>
 
 <header>
   <div class="brand">
@@ -175,23 +181,39 @@
 
 <nav class="tabs">
   <button class="tab-btn" data-tab="daily5">
-    <span class="ic">🚪</span><span class="lb">Проходная и кофе/чай</span>
+    <span class="ic-wrap"><span class="ic">🚪</span><span class="status-dot" id="dot-daily5"></span></span>
+    <span class="lb">Проходная<br>и кофе/чай</span>
   </button>
   <button class="tab-btn" data-tab="daily1">
-    <span class="ic">🧍</span><span class="lb">Вид и раб.место</span>
+    <span class="ic-wrap"><span class="ic">🧍</span><span class="status-dot" id="dot-daily1"></span></span>
+    <span class="lb">Вид и<br>раб.место</span>
   </button>
   <button class="tab-btn" data-tab="monthly4">
-    <span class="ic">🏷️</span><span class="lb">Ценники и порядок</span>
+    <span class="ic-wrap"><span class="ic">🏷️</span><span class="status-dot" id="dot-monthly4"></span></span>
+    <span class="lb">Ценники и<br>порядок</span>
   </button>
 </nav>
 
 <div class="toast" id="toast"><span class="dot"></span><span id="toastText">Сохранено</span></div>
 
+<div class="modal-overlay" id="configModal" style="position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;z-index:99;">
+  <div style="background:var(--bg-elev);border:1px solid var(--line);border-radius:var(--radius);padding:20px;max-width:360px;width:90%;">
+    <h3 style="margin:0 0 12px;font-size:16px;font-weight:800;">Настройка приложения</h3>
+    <p style="color:var(--text-dim);font-size:13px;margin:0 0 16px;">Вставьте URL вашего Google Apps Script Web App (заканчивается на /exec)</p>
+    <input type="url" id="apiUrlInput" placeholder="https://script.google.com/macros/s/..." style="width:100%;background:var(--bg);border:1px solid var(--line);color:var(--text);padding:10px 12px;border-radius:9px;margin-bottom:12px;font-size:14px;">
+    <button onclick="saveApiUrl()" style="width:100%;padding:12px;background:var(--accent);color:var(--accent-ink);border:none;border-radius:9px;font-weight:700;font-size:14px;">Сохранить</button>
+  </div>
+</div>
+
 <script>
+/* ==================== НАСТРОЙКА ==================== */
+let BASE_URL = localStorage.getItem("kpi_api_url") || "";
+
 const ALL_DEPTS = ["Краски","Обои","Ламинат/Плинтуса","Плитка","Сантехника","Хозмаг","Двери"];
 const KPI_DEPTS = ALL_DEPTS.slice(0, 6);
 const SLOTS = ["10:00","12:00","14:00","16:00","18:00"];
 
+// цвет аватара по отделу — для быстрого визуального сканирования списка
 const DEPT_COLORS = {
   "Краски":"#d9a441", "Обои":"#7fb3d5", "Ламинат/Плинтуса":"#c99a6b",
   "Плитка":"#8ec6a6", "Сантехника":"#8aa6c9", "Хозмаг":"#d98a6b", "Двери":"#5f6673"
@@ -218,18 +240,20 @@ const TAB_DESC = {
   monthly4: "Отмечайте в дни плановых обходов"
 };
 
+/* ==================== СОСТОЯНИЕ ==================== */
 let currentTab = "daily5";
 let currentDate = todayStr();
 let currentSlot = nearestSlot();
 let dayState = {};
 let pendingQueue = [];
 let flushTimer = null;
-let BASE_URL = "";
 
 function todayStr(){
   const d = new Date();
   return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
 }
+function isPastDate(dateStr){ return dateStr < todayStr(); }
+function isFutureDate(dateStr){ return dateStr > todayStr(); }
 function nearestSlot(){
   const h = new Date().getHours();
   const hours = SLOTS.map(s=>parseInt(s));
@@ -238,7 +262,17 @@ function nearestSlot(){
   return best;
 }
 function cacheKey(date){ return "kpi_cache_" + date; }
+function saveApiUrl(){
+  const url = document.getElementById("apiUrlInput").value;
+  if(!url.includes("/exec")){ alert("URL должен заканчиваться на /exec"); return; }
+  BASE_URL = url.trim();
+  localStorage.setItem("kpi_api_url", BASE_URL);
+  document.getElementById("configModal").style.display = "none";
+  loadQueue();
+  fetchDay(currentDate);
+}
 
+/* ==================== ЛОКАЛЬНЫЙ КЭШ ==================== */
 function loadLocalCache(date){
   try{ const raw = localStorage.getItem(cacheKey(date)); return raw ? JSON.parse(raw) : {}; }
   catch(e){ return {}; }
@@ -254,28 +288,10 @@ function saveQueue(){
   try{ localStorage.setItem("kpi_queue", JSON.stringify(pendingQueue)); }catch(e){}
 }
 
-function getApiUrl(){
-  return localStorage.getItem("kpi_api_url") || "";
-}
-function setApiUrl(url){
-  localStorage.setItem("kpi_api_url", url.trim());
-  BASE_URL = url.trim();
-}
-function saveApiUrl(){
-  const url = document.getElementById("apiUrlInput").value;
-  if(!url.includes("/exec")) {
-    alert("URL должен заканчиваться на /exec");
-    return;
-  }
-  setApiUrl(url);
-  document.getElementById("configModal").classList.remove("show");
-  fetchDay(currentDate);
-}
-
+/* ==================== СЕТЬ ==================== */
 async function fetchDay(date){
   dayState = loadLocalCache(date);
   render();
-  if(!BASE_URL) return;
   try{
     const res = await fetch(BASE_URL + "?action=state&date=" + date);
     const json = await res.json();
@@ -284,7 +300,7 @@ async function fetchDay(date){
       saveLocalCache(date);
       render();
     }
-  }catch(e){ }
+  }catch(e){ /* офлайн — остаёмся на кэше */ }
 }
 function queuePush(payload){
   pendingQueue.push(payload);
@@ -297,7 +313,7 @@ function scheduleFlush(){
 }
 async function flushQueue(){
   flushTimer = null;
-  if(!pendingQueue.length || !BASE_URL) return;
+  if(!pendingQueue.length) return;
   const item = pendingQueue[0];
   try{
     const res = await fetch(BASE_URL, {
@@ -331,6 +347,7 @@ function showToast(text, bad){
   showToast._h = setTimeout(()=>t.classList.remove("show"), 1800);
 }
 
+/* ==================== ИЗМЕНЕНИЕ ОТМЕТОК ==================== */
 function getEntry(type, slot, dept){
   const s = slot || "_";
   if(!dayState[type]) dayState[type] = {};
@@ -361,12 +378,17 @@ function markAll(type, slot){
   render();
 }
 
+/* ==================== ПОДСЧЁТ ПРОГРЕССА ==================== */
 function sectionCount(sec, slot){
   const s = slot || "_";
   const bucket = (dayState[sec.type] && dayState[sec.type][s]) || {};
   let done = 0;
   ALL_DEPTS.forEach(d=>{ if(bucket[d] && bucket[d].done) done++; });
   return done;
+}
+function slotHasAny(type, slot){
+  const bucket = (dayState[type] && dayState[type][slot]) || {};
+  return Object.keys(bucket).some(d=>bucket[d] && bucket[d].done);
 }
 function tabProgress(tabKey){
   const sections = SECTIONS[tabKey];
@@ -382,12 +404,37 @@ function updateProgressUI(){
   const p = tabProgress(currentTab);
   const ring = document.getElementById("progressRing");
   ring.style.setProperty("--pct", p.pct);
+  ring.title = p.done + " из " + p.total;
   document.getElementById("sectionDesc").textContent = TAB_DESC[currentTab];
+
+  ["daily5","daily1","monthly4"].forEach(key=>{
+    const sections = SECTIONS[key];
+    let done=0, total=0;
+    sections.forEach(sec=>{
+      const slot = sec.slotted ? currentSlot : "";
+      total += ALL_DEPTS.length;
+      done += sectionCount(sec, slot);
+    });
+    const dot = document.getElementById("dot-"+key);
+    dot.classList.remove("partial","full");
+    if(done>0 && done<total) dot.classList.add("partial");
+    if(done>0 && done===total) dot.classList.add("full");
+  });
 }
 
+/* ==================== РЕНДЕР ==================== */
 function render(){
   const main = document.getElementById("main");
   main.innerHTML = "";
+
+  const locked = isPastDate(currentDate);
+
+  if(locked){
+    const banner = document.createElement("div");
+    banner.className = "locked-banner";
+    banner.textContent = "Прошедший день — только просмотр, отметки менять нельзя";
+    main.appendChild(banner);
+  }
 
   const sections = SECTIONS[currentTab];
   const slotted = sections.some(s=>s.slotted);
@@ -398,7 +445,8 @@ function render(){
     SLOTS.forEach(s=>{
       const chip = document.createElement("button");
       chip.className = "slot-chip" + (s===currentSlot ? " active":"");
-      chip.textContent = s;
+      const hasAny = sections.some(sec=>slotHasAny(sec.type, s));
+      chip.innerHTML = (hasAny ? '<span class="sdot"></span>' : '') + s;
       chip.onclick = ()=>{ currentSlot = s; render(); };
       row.appendChild(chip);
     });
@@ -419,25 +467,33 @@ function render(){
     left.innerHTML = `<h2>${sec.label}</h2><div class="section-sub">${sec.sub}</div>`;
     const right = document.createElement("div");
     right.className = "head-right";
+    const wt = document.createElement("span"); wt.className="weight-tag"; wt.textContent = "вес "+sec.weight;
     const pp = document.createElement("span");
     pp.className = "progress-pill" + (doneCount===ALL_DEPTS.length ? " full":"");
     pp.textContent = doneCount+"/"+ALL_DEPTS.length;
-    const wt = document.createElement("span"); wt.className="weight-tag"; wt.textContent = "вес "+sec.weight;
     right.appendChild(pp); right.appendChild(wt);
     top.appendChild(left); top.appendChild(right);
     head.appendChild(top);
 
-    const allBtn = document.createElement("button");
-    allBtn.className = "mark-all";
-    allBtn.textContent = "✓ Отметить все отделы выполнено";
-    allBtn.onclick = ()=>markAll(sec.type, slot);
-    head.appendChild(allBtn);
+    if(!locked){
+      const allBtn = document.createElement("button");
+      allBtn.className = "mark-all";
+      allBtn.textContent = "✓ Отметить все отделы выполнено";
+      allBtn.onclick = ()=>markAll(sec.type, slot);
+      head.appendChild(allBtn);
+    }
     box.appendChild(head);
 
     ALL_DEPTS.forEach((dept, idx)=>{
+      if(dept === "Двери"){
+        const div = document.createElement("div");
+        div.className = "door-divider";
+        div.textContent = "Дополнительно (не входит в KPI)";
+        box.appendChild(div);
+      }
       const entry = getEntry(sec.type, slot, dept);
       const row = document.createElement("div");
-      row.className = "dept-row";
+      row.className = "dept-row" + (dept==="Двери" ? " door":"") + (locked ? " locked":"");
 
       const avatar = document.createElement("div");
       avatar.className = "dept-avatar";
@@ -446,11 +502,13 @@ function render(){
 
       const col = document.createElement("div");
       col.className = "dept-col";
-      const nameEl = document.createElement("div");
-      nameEl.className = "dept-name";
-      nameEl.textContent = dept;
-      if(entry.note){ const nd=document.createElement("span"); nd.className="note-dot"; nd.style.marginLeft="6px"; nameEl.appendChild(nd); }
-      col.appendChild(nameEl);
+      const nameRow = document.createElement("div");
+      nameRow.className = "dept-name-row";
+      const nameEl = document.createElement("span");
+      nameEl.className = "dept-name"; nameEl.textContent = dept;
+      nameRow.appendChild(nameEl);
+      if(entry.note){ const nd=document.createElement("span"); nd.className="note-dot"; nameRow.appendChild(nd); }
+      col.appendChild(nameRow);
       if(dept==="Двери"){
         const sub = document.createElement("span");
         sub.className="dept-sub"; sub.textContent="только учёт";
@@ -458,37 +516,51 @@ function render(){
       }
 
       if(sec.note){
-        const noteBtn = document.createElement("button");
-        noteBtn.className = "note-toggle";
-        noteBtn.textContent = entry.note ? "Замечание ✎" : "+ замечание";
-        const input = document.createElement("input");
-        input.className = "note-input" + (entry.note ? " show":"");
-        input.placeholder = "Комментарий (необязательно)";
-        input.value = entry.note || "";
-        input.onblur = ()=> setNote(sec.type, slot, dept, input.value.trim());
-        input.onclick = (ev)=> ev.stopPropagation();
-        noteBtn.onclick = (ev)=>{
-          ev.stopPropagation();
-          input.classList.toggle("show");
-          if(input.classList.contains("show")) input.focus();
-        };
-        col.appendChild(noteBtn);
-        col.appendChild(input);
+        if(locked){
+          if(entry.note){
+            const noteText = document.createElement("div");
+            noteText.className = "note-static";
+            noteText.textContent = "Замечание: " + entry.note;
+            col.appendChild(noteText);
+          }
+        } else {
+          const noteBtn = document.createElement("button");
+          noteBtn.className = "note-toggle";
+          noteBtn.textContent = entry.note ? "Замечание ✎" : "+ замечание";
+          const input = document.createElement("input");
+          input.className = "note-input" + (entry.note ? " show":"");
+          input.placeholder = "Комментарий (необязательно)";
+          input.value = entry.note || "";
+          input.onblur = ()=> setNote(sec.type, slot, dept, input.value.trim());
+          input.onclick = (ev)=> ev.stopPropagation();
+          noteBtn.onclick = (ev)=>{
+            ev.stopPropagation();
+            input.classList.toggle("show");
+            if(input.classList.contains("show")) input.focus();
+          };
+          col.appendChild(noteBtn);
+          col.appendChild(input);
+        }
       }
 
       const toggle = document.createElement("div");
-      toggle.className = "toggle" + (entry.done ? " on":"");
-      toggle.innerHTML = '<div class="knob"></div>';
+      toggle.className = "toggle" + (entry.done ? " on":"") + (locked ? " locked":"");
+      toggle.innerHTML = '<div class="knob">'+(entry.done ? '✓':'')+'</div>';
 
-      row.onclick = ()=>{
-        const newVal = !entry.done;
-        entry.done = newVal;
-        toggle.classList.toggle("on", newVal);
-        setDone(sec.type, slot, dept, newVal);
-        pp.textContent = sectionCount(sec, slot)+"/"+ALL_DEPTS.length;
-        pp.classList.toggle("full", sectionCount(sec, slot)===ALL_DEPTS.length);
-        updateProgressUI();
-      };
+      if(!locked){
+        row.onclick = ()=>{
+          const newVal = !entry.done;
+          entry.done = newVal;
+          toggle.classList.toggle("on", newVal);
+          toggle.querySelector(".knob").textContent = newVal ? "✓" : "";
+          setDone(sec.type, slot, dept, newVal);
+          pp.textContent = sectionCount(sec, slot)+"/"+ALL_DEPTS.length;
+          pp.classList.toggle("full", sectionCount(sec, slot)===ALL_DEPTS.length);
+          updateProgressUI();
+        };
+      } else {
+        row.onclick = ()=> showToast("Прошедший день доступен только для просмотра", true);
+      }
 
       row.appendChild(avatar);
       row.appendChild(col);
@@ -501,12 +573,15 @@ function render(){
 
   const hint = document.createElement("div");
   hint.className = "hint";
-  hint.textContent = "Все отметки сохраняются мгновенно";
+  hint.textContent = locked
+    ? "Чтобы изменить отметки, вернитесь на сегодняшнюю дату"
+    : "Все отметки сохраняются мгновенно — возвращаться и нажимать «Сохранить» не нужно";
   main.appendChild(hint);
 
   updateProgressUI();
 }
 
+/* ==================== НАВИГАЦИЯ ==================== */
 document.querySelectorAll(".tab-btn").forEach(btn=>{
   btn.onclick = ()=>{
     document.querySelectorAll(".tab-btn").forEach(b=>b.classList.remove("active"));
@@ -518,8 +593,12 @@ document.querySelectorAll(".tab-btn").forEach(btn=>{
 document.querySelector('.tab-btn[data-tab="daily5"]').classList.add("active");
 
 document.getElementById("datePicker").value = currentDate;
+document.getElementById("datePicker").max = todayStr(); // нельзя выбрать будущую дату
 document.getElementById("datePicker").onchange = (e)=>{
-  currentDate = e.target.value || todayStr();
+  let val = e.target.value || todayStr();
+  if(isFutureDate(val)) val = todayStr(); // подстраховка, если браузер не уважает max
+  currentDate = val;
+  document.getElementById("datePicker").value = currentDate;
   fetchDay(currentDate);
 };
 document.getElementById("todayBtn").onclick = ()=>{
@@ -535,16 +614,16 @@ function tickClock(){
 }
 tickClock(); setInterval(tickClock, 30000);
 
+/* ==================== SERVICE WORKER (быстрая повторная загрузка) ==================== */
 if("serviceWorker" in navigator){
   window.addEventListener("load", ()=>{
-    navigator.serviceWorker.register("sw.js").catch(()=>{});
+    navigator.serviceWorker.register("sw.js").catch(()=>{ /* не критично, если не поддерживается окружением */ });
   });
 }
 
-BASE_URL = getApiUrl();
+/* ==================== СТАРТ ==================== */
 if(!BASE_URL){
-  document.getElementById("configModal").classList.add("show");
-  document.getElementById("apiUrlInput").focus();
+  document.getElementById("configModal").style.display = "flex";
 } else {
   loadQueue();
   fetchDay(currentDate);
