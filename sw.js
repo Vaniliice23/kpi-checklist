@@ -1,4 +1,4 @@
-const CACHE_NAME = 'kpi-checklist-v1';
+const CACHE_NAME = 'kpi-checklist-v2'; // версия повышена — старый кэш будет удалён
 const SHELL_FILES = [
   './',
   './index.html',
@@ -10,12 +10,11 @@ self.addEventListener('install', e => {
   e.waitUntil(
     caches.open(CACHE_NAME).then(cache => {
       return cache.addAll(SHELL_FILES).catch(err => {
-        // Если не удаётся кэшировать файлы (например, на локальном диске), просто пропускаем
-        console.log('Cache install error (expected for local files):', err);
+        console.log('Cache install error:', err);
       });
     })
   );
-  self.skipWaiting();
+  self.skipWaiting(); // новая версия SW активируется сразу, без ожидания закрытия вкладок
 });
 
 self.addEventListener('activate', e => {
@@ -24,7 +23,7 @@ self.addEventListener('activate', e => {
       return Promise.all(
         names.map(name => {
           if (name !== CACHE_NAME) {
-            return caches.delete(name);
+            return caches.delete(name); // удаляем весь старый закэшированный мусор
           }
         })
       );
@@ -35,26 +34,23 @@ self.addEventListener('activate', e => {
 
 self.addEventListener('fetch', e => {
   const url = new URL(e.request.url);
-  
-  // API вызовы — всегда сеть
+
+  // API вызовы — всегда сеть, никогда не кэшируем
   if (e.request.method !== 'GET' || url.searchParams.get('action') === 'state') {
     return;
   }
-  
-  // Навигация (загрузка страницы) — cache first, fallback to network
+
+  // Навигация (загрузка страницы) — СНАЧАЛА СЕТЬ, кэш только как запасной
+  // вариант если нет интернета. Это гарантирует, что новая версия сайта
+  // подхватывается сразу, а не показывается старая закэшированная копия.
   if (e.request.mode === 'navigate') {
     e.respondWith(
-      caches.match(e.request).then(cached => {
-        if (cached) return cached;
-        return fetch(e.request).then(res => {
-          const copy = res.clone();
-          caches.open(CACHE_NAME).then(cache => {
-            cache.put(e.request, copy);
-          });
-          return res;
-        }).catch(() => {
-          return caches.match('./index.html');
-        });
+      fetch(e.request).then(res => {
+        const copy = res.clone();
+        caches.open(CACHE_NAME).then(cache => cache.put(e.request, copy));
+        return res;
+      }).catch(() => {
+        return caches.match(e.request).then(cached => cached || caches.match('./index.html'));
       })
     );
   }
